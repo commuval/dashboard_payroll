@@ -21,7 +21,6 @@ st.set_page_config(
 
 class ExcelViewerWeb:
     def __init__(self):
-        self.setup_session_state()
         self.setup_directories()
     
     def setup_session_state(self):
@@ -189,6 +188,9 @@ class ExcelViewerWeb:
     
     def main(self):
         """Hauptfunktion der Streamlit App"""
+        
+        # Session State initialisieren (ERST hier, innerhalb des Streamlit-Kontexts)
+        self.setup_session_state()
         
         # Header
         st.title("📊 Excel Viewer Pro")
