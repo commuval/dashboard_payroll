@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
+import sys
+import subprocess
 from datetime import datetime, timedelta
 import tempfile
 import shutil
@@ -10,6 +12,40 @@ import pickle
 import glob
 import io
 from pathlib import Path
+
+# Prüfe ob die App über streamlit läuft
+def is_streamlit():
+    """Prüft ob das Script über 'streamlit run' ausgeführt wird"""
+    try:
+        import streamlit.runtime.scriptrunner
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        return get_script_run_ctx() is not None
+    except:
+        return False
+
+# Wenn nicht über streamlit gestartet, starte mit streamlit
+if __name__ == "__main__" and not is_streamlit():
+    # Hole Port aus Umgebungsvariable
+    port = os.environ.get('PORT', '8080')
+    
+    # Starte mit streamlit
+    cmd = [
+        sys.executable, '-m', 'streamlit', 'run', __file__,
+        '--server.port', port,
+        '--server.address', '0.0.0.0',
+        '--server.headless', 'true',
+        '--server.enableCORS', 'false',
+        '--server.enableXsrfProtection', 'false'
+    ]
+    
+    try:
+        subprocess.run(cmd, check=True)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"Fehler beim Starten von Streamlit: {e}")
+        sys.exit(1)
+    sys.exit(0)
 
 # Streamlit Konfiguration
 st.set_page_config(
@@ -320,7 +356,7 @@ class ExcelViewerWeb:
                 for backup_file in sorted(backup_files, key=os.path.getctime, reverse=True)[:5]:
                     st.text(f"📄 {backup_file.name}")
 
-# App starten
-if __name__ == "__main__":
+# App starten - nur wenn über Streamlit ausgeführt
+if __name__ == "__main__" and is_streamlit():
     app = ExcelViewerWeb()
     app.main() 
