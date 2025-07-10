@@ -23,7 +23,35 @@ class DatabaseManager:
     def setup_connection(self):
         """Stellt die Datenbankverbindung her"""
         try:
-            # PostgreSQL-Verbindungsdaten aus Umgebungsvariablen
+            # Versuche zuerst DATABASE_URL zu verwenden
+            database_url = os.getenv('DATABASE_URL')
+            
+            if database_url:
+                print(f"Verwende DATABASE_URL für Verbindung")
+                # Stelle sicher, dass SSL aktiviert ist
+                if '?sslmode=' not in database_url:
+                    database_url += '?sslmode=require'
+                elif 'sslmode=require' not in database_url:
+                    # Ersetze andere sslmode Werte mit require
+                    database_url = database_url.replace('sslmode=prefer', 'sslmode=require')
+                    database_url = database_url.replace('sslmode=allow', 'sslmode=require')
+                    database_url = database_url.replace('sslmode=disable', 'sslmode=require')
+                
+                print(f"Verbindungs-URL: {database_url.replace(database_url.split('@')[0].split(':')[2], '***')}")
+                
+                self.engine = create_engine(database_url)
+                self.Session = sessionmaker(bind=self.engine)
+                
+                # Teste Verbindung
+                with self.engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                
+                print("PostgreSQL-Verbindung erfolgreich hergestellt")
+                return
+            else:
+                print("DATABASE_URL nicht gefunden, verwende einzelne Umgebungsvariablen")
+            
+            # Fallback: Einzelne Umgebungsvariablen
             db_host = os.getenv('DB_HOST', 'localhost')
             db_port = os.getenv('DB_PORT', '5432')
             db_name = os.getenv('DB_NAME', 'excel_viewer')

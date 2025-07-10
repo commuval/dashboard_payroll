@@ -1,106 +1,129 @@
-# Excel Viewer Pro - Payroll Dashboard
+# Dashboard & Payroll System
 
-Eine professionelle Webanwendung zur Analyse und Sortierung von Excel-Dateien, speziell entwickelt für Payroll-Daten und Praxis-Management.
+Ein Flask-basiertes Dashboard für die Verwaltung und Analyse von Excel-Dateien mit PostgreSQL-Datenbank (Supabase).
 
 ## Features
 
-- **Excel-Datei Upload**: Unterstützt .xlsx und .xls Dateien bis 16MB
-- **Automatische Praxis-Sortierung**: Verteilt Daten basierend auf Spalte B (Praxis-Namen)
-- **Datenbank-Speicherung**: Sichere PostgreSQL-Integration
-- **Backup-System**: Automatische und manuelle Backups
-- **Responsive Design**: Moderne, professionelle Benutzeroberfläche
-- **Multi-Sheet Support**: Arbeitet mit mehreren Arbeitsblättern
+- Excel-Datei-Upload und -Verarbeitung
+- Automatische Sortierung nach Praxis
+- Datenbank-Speicherung mit Supabase
+- Backup-Funktionalität
+- Web-basierte Benutzeroberfläche
 
-## Technologie-Stack
+## Supabase Setup
 
-- **Backend**: Flask (Python)
-- **Frontend**: Bootstrap 5, jQuery
-- **Datenbank**: PostgreSQL
-- **Deployment**: Gunicorn, Digital Ocean
+### 1. Supabase-Projekt erstellen
+
+1. Gehen Sie zu [supabase.com](https://supabase.com)
+2. Erstellen Sie ein neues Projekt
+3. Notieren Sie sich die Projekt-Referenz und das Datenbankpasswort
+
+### 2. Datenbank-Schema
+
+Das System verwendet folgende Tabellen:
+
+```sql
+CREATE TABLE public.excel_files (
+  id integer NOT NULL DEFAULT nextval('excel_files_id_seq'::regclass),
+  filename character varying NOT NULL,
+  upload_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  file_hash character varying UNIQUE,
+  metadata text,
+  CONSTRAINT excel_files_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.sheets (
+  id integer NOT NULL DEFAULT nextval('sheets_id_seq'::regclass),
+  excel_file_id integer,
+  sheet_name character varying NOT NULL,
+  data_json text,
+  last_modified timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT sheets_pkey PRIMARY KEY (id),
+  CONSTRAINT sheets_excel_file_id_fkey FOREIGN KEY (excel_file_id) REFERENCES public.excel_files(id)
+);
+
+CREATE TABLE public.backups (
+  id integer NOT NULL DEFAULT nextval('backups_id_seq'::regclass),
+  excel_file_id integer,
+  backup_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  backup_data_json text,
+  backup_type character varying,
+  CONSTRAINT backups_pkey PRIMARY KEY (id),
+  CONSTRAINT backups_excel_file_id_fkey FOREIGN KEY (excel_file_id) REFERENCES public.excel_files(id)
+);
+```
+
+### 3. Umgebungsvariablen konfigurieren
+
+Erstellen Sie eine `.env` Datei im Projektverzeichnis:
+
+```env
+# Flask Configuration
+SECRET_KEY=your-secret-key-here
+FLASK_ENV=production
+
+# Supabase Database Configuration
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres?sslmode=require
+
+# Upload Configuration
+MAX_CONTENT_LENGTH=16777216
+```
+
+Ersetzen Sie:
+- `[YOUR-PASSWORD]` mit Ihrem Supabase-Datenbankpasswort
+- `[YOUR-PROJECT-REF]` mit Ihrer Supabase-Projekt-Referenz
 
 ## Installation
 
-### Lokale Entwicklung
+1. **Abhängigkeiten installieren:**
+```bash
+pip install -r requirements.txt
+```
 
-1. **Repository klonen**:
-   ```bash
-   git clone <your-repo-url>
-   cd Dashboard-Payroll
-   ```
+2. **Datenbank-Tabellen erstellen:**
+```bash
+# Starten Sie die Anwendung und besuchen Sie:
+# http://localhost:5000/setup-database
+```
 
-2. **Python-Abhängigkeiten installieren**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Umgebungsvariablen konfigurieren**:
-   ```bash
-   cp env_example.txt .env
-   # Bearbeiten Sie .env mit Ihren Datenbank-Einstellungen
-   ```
-
-4. **PostgreSQL-Datenbank einrichten**:
-   - Erstellen Sie eine PostgreSQL-Datenbank
-   - Konfigurieren Sie die Verbindungsdaten in `.env`
-
-5. **Anwendung starten**:
-   ```bash
-   python app.py
-   ```
-
-### Digital Ocean Deployment
-
-1. **App Platform konfigurieren**:
-   - Erstellen Sie eine neue App in Digital Ocean
-   - Verbinden Sie Ihr Git-Repository
-   - Wählen Sie Python als Runtime
-
-2. **Umgebungsvariablen setzen**:
-   - `SECRET_KEY`: Ein sicherer Schlüssel für Flask
-   - `DB_HOST`: Ihre PostgreSQL-Datenbank-Host
-   - `DB_PORT`: Datenbank-Port (standardmäßig 5432)
-   - `DB_NAME`: Datenbank-Name
-   - `DB_USER`: Datenbank-Benutzer
-   - `DB_PASSWORD`: Datenbank-Passwort
-
-3. **Datenbank einrichten**:
-   - Erstellen Sie eine PostgreSQL-Datenbank in Digital Ocean
-   - Verwenden Sie die bereitgestellten Verbindungsdaten
-
-4. **Deployment**:
-   - Die App wird automatisch deployed, wenn Sie zu Git pushen
-   - Gunicorn startet die Anwendung im Production-Modus
+3. **Anwendung starten:**
+```bash
+python app.py
+```
 
 ## Verwendung
 
-1. **Datei hochladen**: Navigieren Sie zur Startseite und laden Sie eine Excel-Datei hoch
-2. **Daten anzeigen**: Die Datei wird automatisch geladen und angezeigt
-3. **Nach Praxen sortieren**: Klicken Sie auf "Nach Praxen sortieren" um Daten zu verteilen
-4. **Backup erstellen**: Erstellen Sie Backups Ihrer Daten
-5. **Dateien verwalten**: Über die "Dateien"-Seite können Sie alle hochgeladenen Dateien verwalten
+1. **Datei hochladen:** Besuchen Sie die Hauptseite und laden Sie eine Excel-Datei hoch
+2. **Daten anzeigen:** Die Daten werden automatisch in der Datenbank gespeichert und angezeigt
+3. **Nach Praxis sortieren:** Verwenden Sie die Sortier-Funktion, um Daten nach Praxis zu gruppieren
+4. **Backups erstellen:** Erstellen Sie Backups Ihrer Daten über die Backup-Funktion
 
-## Datenbank-Schema
+## Datenbank-Test
 
-Die Anwendung erstellt automatisch folgende Tabellen:
+Testen Sie die Datenbankverbindung unter:
+```
+http://localhost:5000/test-db
+```
 
-- `excel_files`: Speichert Metadaten zu hochgeladenen Dateien
-- `sheets`: Speichert die eigentlichen Excel-Daten als JSON
-- `backups`: Speichert Backup-Versionen der Daten
+## Deployment
+
+Das System ist für Deployment auf Heroku vorbereitet:
+
+1. **Heroku-App erstellen**
+2. **Umgebungsvariablen setzen:**
+```bash
+heroku config:set DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres?sslmode=require
+heroku config:set SECRET_KEY=your-secret-key-here
+```
+
+3. **Deployen:**
+```bash
+git push heroku main
+```
 
 ## Sicherheit
 
+- Alle Datenbankverbindungen verwenden SSL
+- Datei-Hashes verhindern Duplikate
 - Sichere Datei-Upload-Validierung
-- SQL-Injection-Schutz durch SQLAlchemy
-- CSRF-Schutz durch Flask
-- Sichere Session-Verwaltung
-
-## Support
-
-Bei Fragen oder Problemen:
-1. Überprüfen Sie die Logs in Digital Ocean
-2. Stellen Sie sicher, dass die Datenbankverbindung korrekt ist
-3. Überprüfen Sie die Umgebungsvariablen
-
-## Lizenz
-
-Dieses Projekt ist für den internen Gebrauch bestimmt. 
+- Session-basierte Authentifizierung 

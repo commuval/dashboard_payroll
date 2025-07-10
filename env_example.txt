@@ -2,12 +2,15 @@
 SECRET_KEY=your-secret-key-here
 FLASK_ENV=production
 
-# Database Configuration
-DB_HOST=localhost
+# Supabase Database Configuration (Empfohlen)
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres?sslmode=require
+
+# Alternative: Einzelne Datenbankvariablen
+DB_HOST=db.[YOUR-PROJECT-REF].supabase.co
 DB_PORT=5432
-DB_NAME=excel_viewer
+DB_NAME=postgres
 DB_USER=postgres
-DB_PASSWORD=your-database-password
+DB_PASSWORD=[YOUR-PASSWORD]
 
 # Upload Configuration
 MAX_CONTENT_LENGTH=16777216 
