@@ -37,113 +37,113 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def calculate_file_hash(file_content):
-        """Berechnet einen Hash für die Datei"""
-        return hashlib.md5(file_content).hexdigest()
-    
+    """Berechnet einen Hash für die Datei"""
+    return hashlib.md5(file_content).hexdigest()
+
 def load_excel_data(file_path):
-        """Lädt Excel-Datei und gibt DataFrame zurück"""
-        try:
+    """Lädt Excel-Datei und gibt DataFrame zurück"""
+    try:
         excel_file = pd.ExcelFile(file_path)
-            sheet_names = excel_file.sheet_names
-            
-            sheets_data = {}
-            for sheet in sheet_names:
+        sheet_names = excel_file.sheet_names
+        
+        sheets_data = {}
+        for sheet in sheet_names:
             df = pd.read_excel(file_path, sheet_name=sheet)
-                sheets_data[sheet] = df
-            
-            return sheets_data, sheet_names
-        except Exception as e:
-            return None, []
-    
+            sheets_data[sheet] = df
+        
+        return sheets_data, sheet_names
+    except Exception as e:
+        return None, []
+
 def clean_value(value):
-        """Bereinigt Werte für bessere Anzeige"""
+    """Bereinigt Werte für bessere Anzeige"""
+    if pd.isna(value):
+        return ""
+    elif isinstance(value, (int, float)):
         if pd.isna(value):
             return ""
-        elif isinstance(value, (int, float)):
-            if pd.isna(value):
-                return ""
-            return str(value)
-        else:
-            return str(value).strip()
-    
+        return str(value)
+    else:
+        return str(value).strip()
+
 def sortiere_nach_praxis(df):
-        """Verteilt komplette Zeilen basierend auf Spalte B (Praxis) zu jeweiligen Praxis-Sheets"""
-        try:
-            if len(df.columns) < 2:
+    """Verteilt komplette Zeilen basierend auf Spalte B (Praxis) zu jeweiligen Praxis-Sheets"""
+    try:
+        if len(df.columns) < 2:
             return df, "Nicht genügend Spalten! Spalte B (Praxis-Spalte) nicht gefunden."
-            
-            praxis_col = df.columns[1]  # Spalte B (zweite Spalte)
-            
-            # Leere Werte in Spalte B prüfen
-            non_empty_rows = df[praxis_col].notna() & (df[praxis_col].astype(str).str.strip() != '')
-            
-            if not non_empty_rows.any():
+
+        praxis_col = df.columns[1]  # Spalte B (zweite Spalte)
+
+        # Leere Werte in Spalte B prüfen
+        non_empty_rows = df[praxis_col].notna() & (df[praxis_col].astype(str).str.strip() != '')
+
+        if not non_empty_rows.any():
             return df, f"Spalte B '{praxis_col}' enthält keine gültigen Praxis-Namen!"
-            
-            # Nur Zeilen mit gültigen Praxis-Namen verarbeiten
-            valid_df = df[non_empty_rows].copy()
-            
+
+        # Nur Zeilen mit gültigen Praxis-Namen verarbeiten
+        valid_df = df[non_empty_rows].copy()
+
         # Nach Praxis gruppieren
-            praxis_groups = valid_df.groupby(praxis_col, dropna=False)
-            
-            # Bestehende Daten beibehalten
+        praxis_groups = valid_df.groupby(praxis_col, dropna=False)
+
+        # Bestehende Daten beibehalten
         updated_data = {}
-            
-            # Für jede Praxis komplette Zeilen zu eigenem Sheet hinzufügen
-            sheets_created = 0
-            total_rows_added = 0
-            
-            for praxis_name, praxis_rows in praxis_groups:
-                praxis_name_clean = str(praxis_name).strip()
-                
-                if not praxis_name_clean:
-                    continue
-                
-                # Sheet-Name erstellen
-                sheet_name = f"{praxis_name_clean}"
-                sheet_name = sheet_name.replace("/", "_").replace("\\", "_").replace(":", "_").replace("*", "_").replace("?", "_").replace("[", "_").replace("]", "_")
-                
+
+        # Für jede Praxis komplette Zeilen zu eigenem Sheet hinzufügen
+        sheets_created = 0
+        total_rows_added = 0
+
+        for praxis_name, praxis_rows in praxis_groups:
+            praxis_name_clean = str(praxis_name).strip()
+
+            if not praxis_name_clean:
+                continue
+
+            # Sheet-Name erstellen
+            sheet_name = f"{praxis_name_clean}"
+            sheet_name = sheet_name.replace("/", "_").replace("\\", "_").replace(":", "_").replace("*", "_").replace("?", "_").replace("[", "_").replace("]", "_")
+
             # Komplette Zeilen übernehmen
             complete_rows = praxis_rows.copy()
-                
-                if sheet_name in updated_data:
-                # Zu bestehendem Sheet hinzufügen
-                    existing_data = updated_data[sheet_name]
-                    
-                # Duplikate vermeiden
-                    existing_hashes = set()
-                    for _, row in existing_data.iterrows():
-                        row_hash = hash(tuple(row.astype(str)))
-                        existing_hashes.add(row_hash)
-                    
-                    new_rows = []
-                    duplicates_found = 0
 
-                    for _, row in complete_rows.iterrows():
-                        row_hash = hash(tuple(row.astype(str)))
-                        if row_hash not in existing_hashes:
-                            new_rows.append(row)
-                            existing_hashes.add(row_hash)
-                        else:
-                            duplicates_found += 1
-                    
-                    if new_rows:
-                        new_df = pd.DataFrame(new_rows)
+            if sheet_name in updated_data:
+                # Zu bestehendem Sheet hinzufügen
+                existing_data = updated_data[sheet_name]
+
+                # Duplikate vermeiden
+                existing_hashes = set()
+                for _, row in existing_data.iterrows():
+                    row_hash = hash(tuple(row.astype(str)))
+                    existing_hashes.add(row_hash)
+
+                new_rows = []
+                duplicates_found = 0
+
+                for _, row in complete_rows.iterrows():
+                    row_hash = hash(tuple(row.astype(str)))
+                    if row_hash not in existing_hashes:
+                        new_rows.append(row)
+                        existing_hashes.add(row_hash)
+                    else:
+                        duplicates_found += 1
+
+                if new_rows:
+                    new_df = pd.DataFrame(new_rows)
                     updated_data[sheet_name] = pd.concat([existing_data, new_df], ignore_index=True)
-                        total_rows_added += len(new_rows)
-                        
-                        if duplicates_found > 0:
+                    total_rows_added += len(new_rows)
+
+                if duplicates_found > 0:
                     print(f"Sheet '{sheet_name}': {duplicates_found} Duplikate übersprungen")
-                else:
-                    # Neues Sheet erstellen
-                    updated_data[sheet_name] = complete_rows
-                    sheets_created += 1
-                    total_rows_added += len(complete_rows)
-                    
+            else:
+                # Neues Sheet erstellen
+                updated_data[sheet_name] = complete_rows
+                sheets_created += 1
+                total_rows_added += len(complete_rows)
+
         success_message = f"Verteilung abgeschlossen: {sheets_created} neue Sheets erstellt, {total_rows_added} Zeilen hinzugefügt"
         return updated_data, success_message
-                
-        except Exception as e:
+
+    except Exception as e:
         return df, f"Fehler bei der Verteilung: {str(e)}"
 
 @app.route('/')
@@ -336,7 +336,7 @@ def delete_file(file_id):
     """Löscht eine Datei"""
     if db_manager.delete_file(file_id):
         flash('Datei erfolgreich gelöscht', 'success')
-                                else:
+    else:
         flash('Fehler beim Löschen der Datei', 'error')
     
     return redirect(url_for('files'))
@@ -383,18 +383,18 @@ def test_database():
                     'status': 'success',
                     'message': 'Datenbankverbindung erfolgreich',
                     'test_result': result.fetchone()[0]
-                })
+                    })
         else:
             return jsonify({
                 'status': 'error',
                 'message': 'Keine Datenbankverbindung verfügbar'
-            })
+                })
     except Exception as e:
         return jsonify({
             'status': 'error',
             'message': f'Datenbankfehler: {str(e)}',
             'error_type': type(e).__name__
-        })
+            })
 
 if __name__ == '__main__':
     # Erstelle Datenbank-Tabellen
