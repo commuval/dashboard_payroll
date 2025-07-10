@@ -36,9 +36,9 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def calculate_file_hash(file_content):
-        """Berechnet einen Hash für die Datei"""
-        return hashlib.md5(file_content).hexdigest()
-    
+    """Berechnet einen Hash für die Datei"""
+    return hashlib.md5(file_content).hexdigest()
+
 def load_excel_data(file_path):
     """Lädt Excel-Datei und gibt DataFrame zurück"""
     try:
@@ -53,18 +53,18 @@ def load_excel_data(file_path):
         return sheets_data, sheet_names
     except Exception as e:
         return None, []
-    
+
 def clean_value(value):
-        """Bereinigt Werte für bessere Anzeige"""
+    """Bereinigt Werte für bessere Anzeige"""
+    if pd.isna(value):
+        return ""
+    elif isinstance(value, (int, float)):
         if pd.isna(value):
             return ""
-        elif isinstance(value, (int, float)):
-            if pd.isna(value):
-                return ""
-            return str(value)
-        else:
-            return str(value).strip()
-    
+        return str(value)
+    else:
+        return str(value).strip()
+
 def sortiere_nach_praxis(df):
     """Verteilt komplette Zeilen basierend auf Spalte B (Praxis) zu jeweiligen Praxis-Sheets"""
     try:
@@ -221,7 +221,7 @@ def viewer():
     filename = session.get('current_filename', 'Unbekannte Datei')
     sheet_names = session.get('sheet_names', [])
     current_sheet = session.get('current_sheet')
-        
+    
     # Lade aktuelle Daten
     sheets_data, _ = db_manager.load_excel_file(file_hash=None, filename=filename)
     
@@ -319,7 +319,7 @@ def delete_file(file_id):
     """Löscht eine Datei"""
     if db_manager.delete_file(file_id):
         flash('Datei erfolgreich gelöscht', 'success')
-                                else:
+    else:
         flash('Fehler beim Löschen der Datei', 'error')
     
     return redirect(url_for('files'))
@@ -344,7 +344,7 @@ def create_backup(file_id):
 if __name__ == '__main__':
     # Erstelle Datenbank-Tabellen
     db_manager.create_tables()
-
+    
     # Starte Flask-App
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False) 
