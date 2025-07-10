@@ -38,7 +38,7 @@ class DatabaseManager:
                 self.engine = None
                 return
             
-            connection_string = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            connection_string = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}?sslmode=require"
             
             self.engine = create_engine(connection_string)
             self.Session = sessionmaker(bind=self.engine)
