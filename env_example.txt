@@ -1,0 +1,13 @@
+# Flask Configuration
+SECRET_KEY=your-secret-key-here
+FLASK_ENV=production
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=excel_viewer
+DB_USER=postgres
+DB_PASSWORD=your-database-password
+
+# Upload Configuration
+MAX_CONTENT_LENGTH=16777216 

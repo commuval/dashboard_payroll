@@ -1,97 +1,106 @@
-# Excel Viewer Pro - Web Version
+# Excel Viewer Pro - Payroll Dashboard
 
-Eine webbasierte Excel-Viewer-Anwendung, die speziell für Cloud-Deployment (DigitalOcean) entwickelt wurde.
+Eine professionelle Webanwendung zur Analyse und Sortierung von Excel-Dateien, speziell entwickelt für Payroll-Daten und Praxis-Management.
 
 ## Features
 
-- 📊 **Excel-Dateien hochladen und anzeigen**: Unterstützt .xlsx und .xls Dateien
-- 🔄 **Multi-Sheet Support**: Wechseln zwischen verschiedenen Excel-Sheets
-- ⚡ **Sortierung nach Praxis**: Automatische Sortierung nach Praxis-Spalten
-- ✏️ **Inline-Bearbeitung**: Direkte Bearbeitung von Zellen im Browser
-- 💾 **Backup-System**: Automatische Backups mit Zeitstempel
-- ⬇️ **Download-Funktion**: Export der bearbeiteten Daten als Excel
-- 🎨 **Moderne Web-UI**: Responsive Design mit Streamlit
+- **Excel-Datei Upload**: Unterstützt .xlsx und .xls Dateien bis 16MB
+- **Automatische Praxis-Sortierung**: Verteilt Daten basierend auf Spalte B (Praxis-Namen)
+- **Datenbank-Speicherung**: Sichere PostgreSQL-Integration
+- **Backup-System**: Automatische und manuelle Backups
+- **Responsive Design**: Moderne, professionelle Benutzeroberfläche
+- **Multi-Sheet Support**: Arbeitet mit mehreren Arbeitsblättern
 
-## Installation & Lokale Entwicklung
+## Technologie-Stack
 
-```bash
-# Dependencies installieren
-pip install -r requirements.txt
+- **Backend**: Flask (Python)
+- **Frontend**: Bootstrap 5, jQuery
+- **Datenbank**: PostgreSQL
+- **Deployment**: Gunicorn, Digital Ocean
 
-# App lokal starten
-streamlit run app.py
-```
+## Installation
 
-Die App ist dann unter `http://localhost:8501` verfügbar.
+### Lokale Entwicklung
 
-## DigitalOcean Deployment
+1. **Repository klonen**:
+   ```bash
+   git clone <your-repo-url>
+   cd Dashboard-Payroll
+   ```
 
-### 1. App Platform Setup
+2. **Python-Abhängigkeiten installieren**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-1. **Repository verbinden**: Verknüpfen Sie Ihr GitHub-Repository mit DigitalOcean App Platform
-2. **Build-Einstellungen**:
-   - **Run Command**: `./start.sh` oder `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true`
-   - **Environment**: Python
-   - **Source Directory**: `/` (Root)
+3. **Umgebungsvariablen konfigurieren**:
+   ```bash
+   cp env_example.txt .env
+   # Bearbeiten Sie .env mit Ihren Datenbank-Einstellungen
+   ```
 
-### 2. Umgebungsvariablen
+4. **PostgreSQL-Datenbank einrichten**:
+   - Erstellen Sie eine PostgreSQL-Datenbank
+   - Konfigurieren Sie die Verbindungsdaten in `.env`
 
-Keine speziellen Umgebungsvariablen erforderlich.
+5. **Anwendung starten**:
+   ```bash
+   python app.py
+   ```
 
-### 3. Port-Konfiguration
+### Digital Ocean Deployment
 
-Die App ist für Port 8080 konfiguriert, der automatisch von DigitalOcean zugewiesen wird.
+1. **App Platform konfigurieren**:
+   - Erstellen Sie eine neue App in Digital Ocean
+   - Verbinden Sie Ihr Git-Repository
+   - Wählen Sie Python als Runtime
 
-## Unterschiede zur Desktop-Version
+2. **Umgebungsvariablen setzen**:
+   - `SECRET_KEY`: Ein sicherer Schlüssel für Flask
+   - `DB_HOST`: Ihre PostgreSQL-Datenbank-Host
+   - `DB_PORT`: Datenbank-Port (standardmäßig 5432)
+   - `DB_NAME`: Datenbank-Name
+   - `DB_USER`: Datenbank-Benutzer
+   - `DB_PASSWORD`: Datenbank-Passwort
 
-- ❌ **Entfernt**: tkinter (Desktop-GUI)
-- ✅ **Neu**: Streamlit Web-Interface
-- ✅ **Verbessert**: Cloud-native Architektur
-- ✅ **Hinzugefügt**: Web-Download-Funktionalität
+3. **Datenbank einrichten**:
+   - Erstellen Sie eine PostgreSQL-Datenbank in Digital Ocean
+   - Verwenden Sie die bereitgestellten Verbindungsdaten
 
-## Datei-Struktur
-
-```
-Dashboard & Payroll/
-├── app.py                 # Haupt-Streamlit-Anwendung
-├── requirements.txt       # Python-Dependencies
-├── runtime.txt           # Python-Version für DigitalOcean
-├── start.sh              # Startup-Script für DigitalOcean
-├── .streamlit/
-│   └── config.toml       # Streamlit-Konfiguration
-├── backups/              # Automatische Backups
-└── README.md             # Diese Datei
-```
+4. **Deployment**:
+   - Die App wird automatisch deployed, wenn Sie zu Git pushen
+   - Gunicorn startet die Anwendung im Production-Modus
 
 ## Verwendung
 
-1. **Excel-Datei hochladen**: Nutzen Sie die Seitenleiste zum Upload
-2. **Sheet auswählen**: Bei Multi-Sheet-Dateien können Sie das gewünschte Sheet wählen
-3. **Daten sortieren**: Klicken Sie auf "Nach Praxis sortieren"
-4. **Bearbeiten**: Nutzen Sie den integrierten Dateneditor
-5. **Speichern**: Erstellen Sie Backups oder laden Sie die Datei herunter
+1. **Datei hochladen**: Navigieren Sie zur Startseite und laden Sie eine Excel-Datei hoch
+2. **Daten anzeigen**: Die Datei wird automatisch geladen und angezeigt
+3. **Nach Praxen sortieren**: Klicken Sie auf "Nach Praxen sortieren" um Daten zu verteilen
+4. **Backup erstellen**: Erstellen Sie Backups Ihrer Daten
+5. **Dateien verwalten**: Über die "Dateien"-Seite können Sie alle hochgeladenen Dateien verwalten
 
-## Technische Details
+## Datenbank-Schema
 
-- **Framework**: Streamlit 1.28+
-- **Backend**: Python 3.13
-- **Excel-Handling**: pandas + openpyxl
-- **Cloud-Platform**: DigitalOcean App Platform
-- **Backup-Format**: Pickle (.pkl) + Excel (.xlsx)
+Die Anwendung erstellt automatisch folgende Tabellen:
 
-## Troubleshooting
+- `excel_files`: Speichert Metadaten zu hochgeladenen Dateien
+- `sheets`: Speichert die eigentlichen Excel-Daten als JSON
+- `backups`: Speichert Backup-Versionen der Daten
 
-### Deployment-Probleme
+## Sicherheit
 
-- Stellen Sie sicher, dass `requirements.txt` alle Dependencies enthält
-- Port 8080 muss von der App verwendet werden
-- `start.sh` muss im Root-Verzeichnis liegen
-
-### Performance
-
-- Große Excel-Dateien (>50MB) können länger laden
-- Backups werden automatisch nach 10 Tagen gelöscht
+- Sichere Datei-Upload-Validierung
+- SQL-Injection-Schutz durch SQLAlchemy
+- CSRF-Schutz durch Flask
+- Sichere Session-Verwaltung
 
 ## Support
 
-Bei Problemen prüfen Sie die DigitalOcean App-Logs für detaillierte Fehlermeldungen. 
+Bei Fragen oder Problemen:
+1. Überprüfen Sie die Logs in Digital Ocean
+2. Stellen Sie sicher, dass die Datenbankverbindung korrekt ist
+3. Überprüfen Sie die Umgebungsvariablen
+
+## Lizenz
+
+Dieses Projekt ist für den internen Gebrauch bestimmt. 
