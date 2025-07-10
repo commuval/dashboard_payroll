@@ -200,8 +200,24 @@ def upload_file():
                 flash(f'Datei "{filename}" erfolgreich hochgeladen', 'success')
                 return redirect(url_for('viewer'))
             else:
-                flash('Fehler beim Speichern in der Datenbank', 'error')
-                return redirect(url_for('index'))
+                flash('Fehler beim Speichern in der Datenbank - Tabellen werden erstellt...', 'warning')
+                # Versuche Tabellen zu erstellen und nochmal zu speichern
+                try:
+                    db_manager.create_tables()
+                    file_id = db_manager.save_excel_file(filename, file_hash, sheets_data, metadata)
+                    if file_id:
+                        session['current_file_id'] = file_id
+                        session['current_filename'] = filename
+                        session['sheet_names'] = sheet_names
+                        session['current_sheet'] = sheet_names[0] if sheet_names else None
+                        flash(f'Datei "{filename}" erfolgreich hochgeladen (Tabellen erstellt)', 'success')
+                        return redirect(url_for('viewer'))
+                    else:
+                        flash('Fehler beim Speichern in der Datenbank nach Tabellenerstellung', 'error')
+                        return redirect(url_for('index'))
+                except Exception as e:
+                    flash(f'Datenbankfehler: {str(e)}', 'error')
+                    return redirect(url_for('index'))
             
         except Exception as e:
             flash(f'Fehler beim Verarbeiten der Datei: {str(e)}', 'error')
@@ -340,6 +356,20 @@ def create_backup(file_id):
         flash('Keine Daten zum Sichern gefunden', 'error')
     
     return redirect(url_for('viewer'))
+
+@app.route('/setup-database')
+def setup_database():
+    """Erstellt die Datenbank-Tabellen"""
+    try:
+        success = db_manager.create_tables()
+        if success:
+            flash('Datenbank-Tabellen erfolgreich erstellt!', 'success')
+        else:
+            flash('Fehler beim Erstellen der Tabellen', 'error')
+    except Exception as e:
+        flash(f'Datenbankfehler: {str(e)}', 'error')
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     # Erstelle Datenbank-Tabellen
