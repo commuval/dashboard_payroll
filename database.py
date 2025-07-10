@@ -49,9 +49,12 @@ class DatabaseManager:
     def create_tables(self):
         """Erstellt die notwendigen Tabellen"""
         if not self.engine:
+            print("Keine Datenbankverbindung verfügbar")
             return False
         
         try:
+            print("Erstelle Tabellen...")
+            
             # Tabelle für Excel-Dateien
             excel_files = Table('excel_files', self.metadata,
                 Column('id', Integer, primary_key=True),
@@ -79,19 +82,24 @@ class DatabaseManager:
                 Column('backup_type', String(50))  # 'manual', 'auto'
             )
             
+            print("Tabellen-Definitionen erstellt, erstelle in Datenbank...")
             self.metadata.create_all(self.engine)
+            print("Tabellen erfolgreich erstellt!")
             return True
             
         except Exception as e:
             print(f"Fehler beim Erstellen der Tabellen: {str(e)}")
+            print(f"Fehler-Typ: {type(e).__name__}")
             return False
     
     def save_excel_file(self, filename, file_hash, sheets_data, metadata=None):
         """Speichert eine Excel-Datei in der Datenbank"""
         if not self.engine:
+            print("Keine Datenbankverbindung verfügbar")
             return None
         
         try:
+            print(f"Versuche Datei '{filename}' zu speichern...")
             with self.Session() as session:
                 # Prüfe ob Datei bereits existiert
                 existing_file = session.execute(
@@ -104,6 +112,7 @@ class DatabaseManager:
                     print(f"Datei '{filename}' bereits in Datenbank vorhanden")
                 else:
                     # Neue Datei einfügen
+                    print("Füge neue Datei in Datenbank ein...")
                     result = session.execute(
                         text("""
                             INSERT INTO excel_files (filename, file_hash, metadata)
@@ -121,12 +130,14 @@ class DatabaseManager:
                     print(f"Datei '{filename}' erfolgreich in Datenbank gespeichert")
                 
                 # Sheets speichern
+                print("Speichere Sheets...")
                 self.save_sheets(file_id, sheets_data)
                 
                 return file_id
                 
         except Exception as e:
             print(f"Fehler beim Speichern der Datei: {str(e)}")
+            print(f"Fehler-Typ: {type(e).__name__}")
             return None
     
     def save_sheets(self, file_id, sheets_data):
