@@ -30,6 +30,14 @@ class DatabaseManager:
             db_user = os.getenv('DB_USER', 'postgres')
             db_password = os.getenv('DB_PASSWORD', '')
             
+            print(f"Verbinde zu Datenbank: {db_host}:{db_port}/{db_name} als {db_user}")
+            
+            # Prüfe ob alle erforderlichen Variablen gesetzt sind
+            if not db_password:
+                print("WARNUNG: DB_PASSWORD ist nicht gesetzt!")
+                self.engine = None
+                return
+            
             connection_string = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
             
             self.engine = create_engine(connection_string)
@@ -43,6 +51,7 @@ class DatabaseManager:
             
         except Exception as e:
             print(f"Fehler bei der Datenbankverbindung: {str(e)}")
+            print(f"Fehler-Typ: {type(e).__name__}")
             print("Stellen Sie sicher, dass PostgreSQL läuft und die Verbindungsdaten korrekt sind.")
             self.engine = None
     

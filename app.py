@@ -14,6 +14,7 @@ import hashlib
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from database import DatabaseManager
+from sqlalchemy import text
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -370,6 +371,30 @@ def setup_database():
         flash(f'Datenbankfehler: {str(e)}', 'error')
     
     return redirect(url_for('index'))
+
+@app.route('/test-db')
+def test_database():
+    """Testet die Datenbankverbindung"""
+    try:
+        if db_manager.engine:
+            with db_manager.engine.connect() as conn:
+                result = conn.execute(text("SELECT 1 as test"))
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Datenbankverbindung erfolgreich',
+                    'test_result': result.fetchone()[0]
+                })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Keine Datenbankverbindung verfügbar'
+            })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Datenbankfehler: {str(e)}',
+            'error_type': type(e).__name__
+        })
 
 if __name__ == '__main__':
     # Erstelle Datenbank-Tabellen
