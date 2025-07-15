@@ -6,10 +6,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import json
-from dotenv import load_dotenv
-
-# Lade Umgebungsvariablen
-load_dotenv()
 
 Base = declarative_base()
 
@@ -21,66 +17,28 @@ class DatabaseManager:
         self.setup_connection()
     
     def setup_connection(self):
-        """Stellt die Datenbankverbindung her"""
+        """Stellt die Datenbankverbindung zur DigitalOcean-PostgreSQL her"""
         try:
-            # Versuche zuerst DATABASE_URL zu verwenden
-            database_url = os.getenv('DATABASE_URL')
-            
-            if database_url:
-                print(f"Verwende DATABASE_URL für Verbindung")
-                # Stelle sicher, dass SSL aktiviert ist
-                if '?sslmode=' not in database_url:
-                    database_url += '?sslmode=require'
-                elif 'sslmode=require' not in database_url:
-                    # Ersetze andere sslmode Werte mit require
-                    database_url = database_url.replace('sslmode=prefer', 'sslmode=require')
-                    database_url = database_url.replace('sslmode=allow', 'sslmode=require')
-                    database_url = database_url.replace('sslmode=disable', 'sslmode=require')
-                
-                print(f"Verbindungs-URL: {database_url.replace(database_url.split('@')[0].split(':')[2], '***')}")
-                
-                self.engine = create_engine(database_url)
-                self.Session = sessionmaker(bind=self.engine)
-                
-                # Teste Verbindung
-                with self.engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-                
-                print("PostgreSQL-Verbindung erfolgreich hergestellt")
-                return
-            else:
-                print("DATABASE_URL nicht gefunden, verwende einzelne Umgebungsvariablen")
-            
-            # Fallback: Einzelne Umgebungsvariablen
-            db_host = os.getenv('DB_HOST', 'localhost')
-            db_port = os.getenv('DB_PORT', '5432')
-            db_name = os.getenv('DB_NAME', 'excel_viewer')
-            db_user = os.getenv('DB_USER', 'postgres')
-            db_password = os.getenv('DB_PASSWORD', '')
-            
-            print(f"Verbinde zu Datenbank: {db_host}:{db_port}/{db_name} als {db_user}")
-            
-            # Prüfe ob alle erforderlichen Variablen gesetzt sind
-            if not db_password:
-                print("WARNUNG: DB_PASSWORD ist nicht gesetzt!")
-                self.engine = None
-                return
+            # Feste Verbindungsdaten für DigitalOcean
+            db_host = 'db-postgresql-fra1-97004-do-user-15801429-0.f.db.ondigitalocean.com'
+            db_port = '25060'
+            db_name = 'defaultdb'
+            db_user = 'doadmin'
+            db_password = 'AVNS_Rixqxw4AeRYQQaii6th'  # <-- Passwort hier eintragen
             
             connection_string = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}?sslmode=require"
-            
+            print(f"Verbinde zu DigitalOcean PostgreSQL: {db_host}:{db_port}/{db_name} als {db_user}")
             self.engine = create_engine(connection_string)
             self.Session = sessionmaker(bind=self.engine)
             
             # Teste Verbindung
             with self.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            
-            print("PostgreSQL-Verbindung erfolgreich hergestellt")
-            
+            print("PostgreSQL-Verbindung zu DigitalOcean erfolgreich hergestellt")
         except Exception as e:
             print(f"Fehler bei der Datenbankverbindung: {str(e)}")
             print(f"Fehler-Typ: {type(e).__name__}")
-            print("Stellen Sie sicher, dass PostgreSQL läuft und die Verbindungsdaten korrekt sind.")
+            print("Stellen Sie sicher, dass die Verbindungsdaten korrekt sind.")
             self.engine = None
     
     def create_tables(self):

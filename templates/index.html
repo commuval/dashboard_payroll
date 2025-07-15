@@ -5,17 +5,17 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white">
-                <h3 class="card-title mb-0">
-                    <i class="fas fa-upload me-2"></i>Excel-Datei hochladen
+        <div class="card shadow" style="border:1px solid #e0e3e7; background:#fff;">
+            <div class="card-header" style="background:#fff; color:#444;">
+                <h3 class="card-title mb-0" style="color:#444;">
+                    <i class="fas fa-upload me-2" style="color:#444;"></i>Excel-Datei hochladen
                 </h3>
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    <i class="fas fa-file-excel fa-3x text-primary mb-3"></i>
-                    <h4>Willkommen bei Excel Viewer Pro</h4>
-                    <p class="text-muted">Laden Sie Ihre Excel-Datei hoch, um sie zu analysieren und nach Praxen zu sortieren.</p>
+                    <i class="fas fa-file-excel fa-3x" style="color:#444; opacity:0.7;"></i>
+                    <h4 style="color:#444;">Willkommen bei Excel Viewer Pro</h4>
+                    <p style="color:#6c757d;">Laden Sie Ihre Excel-Datei hoch, um sie zu analysieren und nach Praxen zu sortieren.</p>
                 </div>
 
                 <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
@@ -26,55 +26,11 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
+                        <button type="submit" class="btn btn-primary btn-lg" style="background:#fff; color:#444; border:1px solid #d1d5db;">
                             <i class="fas fa-upload me-2"></i>Datei hochladen und verarbeiten
                         </button>
                     </div>
                 </form>
-
-                <hr class="my-4">
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card border-primary">
-                            <div class="card-body text-center">
-                                <i class="fas fa-chart-bar fa-2x text-primary mb-2"></i>
-                                <h5>Datenanalyse</h5>
-                                <p class="small text-muted">Analysieren Sie Ihre Excel-Daten mit professionellen Tools</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card border-success">
-                            <div class="card-body text-center">
-                                <i class="fas fa-sort fa-2x text-success mb-2"></i>
-                                <h5>Praxis-Sortierung</h5>
-                                <p class="small text-muted">Automatische Verteilung nach Praxen basierend auf Spalte B</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <div class="card border-info">
-                            <div class="card-body text-center">
-                                <i class="fas fa-database fa-2x text-info mb-2"></i>
-                                <h5>Datenbank-Speicherung</h5>
-                                <p class="small text-muted">Sichere Speicherung in PostgreSQL-Datenbank</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card border-warning">
-                            <div class="card-body text-center">
-                                <i class="fas fa-shield-alt fa-2x text-warning mb-2"></i>
-                                <h5>Backup-System</h5>
-                                <p class="small text-muted">Automatische Backups für Ihre Daten</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
