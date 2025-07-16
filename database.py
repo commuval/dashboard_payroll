@@ -136,54 +136,39 @@ class DatabaseManager:
             return None
     
     def save_sheets(self, file_id, sheets_data):
-        """Speichert alle Sheets einer Excel-Datei"""
+        """Speichert alle Sheets einer Excel-Datei, ohne bestehende andere Sheets zu löschen oder zu überschreiben."""
         if not self.engine:
             return
-        
         try:
             with self.Session() as session:
                 for sheet_name, df in sheets_data.items():
                     # DataFrame zu JSON konvertieren
                     data_json = df.to_json(orient='records', date_format='iso')
-                    
                     # Prüfe ob Sheet bereits existiert
                     existing_sheet = session.execute(
                         text("SELECT id FROM sheets WHERE excel_file_id = :file_id AND sheet_name = :sheet_name"),
                         {"file_id": file_id, "sheet_name": sheet_name}
                     ).fetchone()
-                    
                     if existing_sheet:
                         # Sheet aktualisieren
                         session.execute(
                             text("""
-                                UPDATE sheets 
-                                SET data_json = :data_json, last_modified = :now
-                                WHERE excel_file_id = :file_id AND sheet_name = :sheet_name
+                                UPDATE sheets SET data_json = :data_json, last_modified = :last_modified
+                                WHERE id = :id
                             """),
-                            {
-                                "data_json": data_json,
-                                "now": datetime.utcnow(),
-                                "file_id": file_id,
-                                "sheet_name": sheet_name
-                            }
+                            {"data_json": data_json, "last_modified": datetime.utcnow(), "id": existing_sheet[0]}
                         )
                     else:
                         # Neues Sheet einfügen
                         session.execute(
                             text("""
-                                INSERT INTO sheets (excel_file_id, sheet_name, data_json)
-                                VALUES (:file_id, :sheet_name, :data_json)
+                                INSERT INTO sheets (excel_file_id, sheet_name, data_json, last_modified)
+                                VALUES (:file_id, :sheet_name, :data_json, :last_modified)
                             """),
-                            {
-                                "file_id": file_id,
-                                "sheet_name": sheet_name,
-                                "data_json": data_json
-                            }
+                            {"file_id": file_id, "sheet_name": sheet_name, "data_json": data_json, "last_modified": datetime.utcnow()}
                         )
-                
                 session.commit()
-                print(f"Alle Sheets erfolgreich in Datenbank gespeichert")
-                
+                print("Alle Praxis-Sheets erfolgreich gespeichert. Original-Sheets bleiben erhalten.")
         except Exception as e:
             print(f"Fehler beim Speichern der Sheets: {str(e)}")
     

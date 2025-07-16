@@ -229,94 +229,142 @@ def upload_file():
 
 @app.route('/viewer')
 def viewer():
-    """Excel-Viewer Seite"""
     if 'current_file_id' not in session:
         flash('Keine Datei geladen', 'error')
         return redirect(url_for('index'))
-    
+
     file_id = session['current_file_id']
     filename = session.get('current_filename', 'Unbekannte Datei')
-    sheet_names = session.get('sheet_names', [])
-    current_sheet = session.get('current_sheet')
-    
-    # Lade aktuelle Daten
+    # Sheet aus GET-Parameter oder Session
+    current_sheet = request.args.get('sheet') or session.get('current_sheet')
+
     sheets_data, _ = db_manager.load_excel_file(file_hash=None, filename=filename)
-    
-    if sheets_data is None:
+    if sheets_data is None or not sheets_data:
         flash('Fehler beim Laden der Datei', 'error')
         return redirect(url_for('index'))
-    
+
+    # Nur Original-Sheets anzeigen (wie in der Excel-Datei)
+    original_sheet_names = session.get('sheet_names', [])
+    sheet_names = [s for s in original_sheet_names if s in sheets_data]
+
+    if not current_sheet or current_sheet not in sheet_names:
+        current_sheet = sheet_names[0] if sheet_names else None
+    session['current_sheet'] = current_sheet
+
     current_data = sheets_data.get(current_sheet, pd.DataFrame()) if current_sheet else pd.DataFrame()
-    
-    return render_template('viewer.html', 
-                         filename=filename,
-                         sheet_names=sheet_names,
-                         current_sheet=current_sheet,
-                         data=current_data.to_dict('records') if not current_data.empty else [],
-                         columns=current_data.columns.tolist() if not current_data.empty else [])
+
+    return render_template('viewer.html',
+        filename=filename,
+        sheet_names=sheet_names,
+        current_sheet=current_sheet,
+        data=current_data.fillna('').to_dict('records') if not current_data.empty else [],
+        columns=current_data.columns.tolist() if not current_data.empty else []
+    )
 
 @app.route('/change_sheet/<sheet_name>')
 def change_sheet(sheet_name):
-    """Wechselt zu einem anderen Sheet"""
+    print("Sheet-Wechsel zu:", sheet_name)
+    print("Sheet-Wechsel zu (repr):", repr(sheet_name))
     if 'current_file_id' not in session:
         return jsonify({'error': 'Keine Datei geladen'})
-    
+
     session['current_sheet'] = sheet_name
-    
-    # Lade Daten für das neue Sheet
     filename = session.get('current_filename', '')
     sheets_data, _ = db_manager.load_excel_file(file_hash=None, filename=filename)
-    
-    if sheets_data and sheet_name in sheets_data:
-        data = sheets_data[sheet_name]
+    print("Verfügbare Sheets:", list(sheets_data.keys()))
+    # Sheet-Namen robust vergleichen (strip, lower)
+    sheet_map = {s.strip().lower(): s for s in sheets_data.keys()}
+    key = sheet_name.strip().lower()
+    if key in sheet_map:
+        real_name = sheet_map[key]
+        data = sheets_data[real_name]
+        print("Daten für Sheet", real_name, ":", data.head() if hasattr(data, 'head') else data)
         return jsonify({
             'success': True,
             'data': data.to_dict('records'),
             'columns': data.columns.tolist()
         })
-    
+    print("Sheet nicht gefunden:", sheet_name)
     return jsonify({'error': 'Sheet nicht gefunden'})
 
 @app.route('/sort_praxis')
 def sort_praxis():
-    """Sortiert Daten nach Praxis"""
     if 'current_file_id' not in session:
         return jsonify({'error': 'Keine Datei geladen'})
-    
+
     file_id = session['current_file_id']
     filename = session.get('current_filename', '')
-    
+    current_sheet = session.get('current_sheet')
+
     # Lade aktuelle Daten
     sheets_data, sheet_names = db_manager.load_excel_file(file_hash=None, filename=filename)
-    
     if sheets_data is None:
         return jsonify({'error': 'Fehler beim Laden der Daten'})
-    
-    # Verwende das erste Sheet für die Sortierung
-    if sheet_names:
-        first_sheet = sheet_names[0]
-        df = sheets_data[first_sheet]
-        
-        # Sortiere nach Praxis
-        sorted_data, message = sortiere_nach_praxis(df)
-        
-        if isinstance(sorted_data, dict):
-            # Neue Daten in Datenbank speichern
-            db_manager.save_sheets(file_id, sorted_data)
-            
-            # Session aktualisieren
-            session['sheet_names'] = list(sorted_data.keys())
-            session['current_sheet'] = list(sorted_data.keys())[0] if sorted_data else None
-            
-            return jsonify({
-                'success': True,
-                'message': message,
-                'new_sheets': list(sorted_data.keys())
-            })
+
+    # Immer das Sheet 'Dashboard' als Quelle für die Sortierung verwenden, falls vorhanden
+    original_sheet_names = session.get('sheet_names', [])
+    dashboard_sheet = None
+    for s in original_sheet_names:
+        if s.strip().lower() == 'dashboard':
+            dashboard_sheet = s
+            break
+    if dashboard_sheet and dashboard_sheet in sheets_data:
+        df = sheets_data[dashboard_sheet]
+        current_sheet = dashboard_sheet
+    elif original_sheet_names and original_sheet_names[0] in sheets_data:
+        df = sheets_data[original_sheet_names[0]]
+        current_sheet = original_sheet_names[0]
+    else:
+        return jsonify({'error': 'Kein gültiges Sheet zum Sortieren gefunden'})
+    print(f"[DEBUG] Spalten Dashboard: {list(df.columns)}")
+    # Sortiere nach Praxis (Spalte B)
+    sorted_data, message = sortiere_nach_praxis(df)
+    if isinstance(sorted_data, dict):
+        print(f"[DEBUG] sortiere_nach_praxis: { {k: v.shape for k, v in sorted_data.items()} }")
+        for praxis_sheet, praxis_df in sorted_data.items():
+            print(f"[DEBUG] Spalten {praxis_sheet}: {list(praxis_df.columns)}")
+        # Bestehende Sheets aus der DB laden
+        all_sheets_data, all_sheet_names = db_manager.load_excel_file(file_hash=None, filename=filename)
+        # Original-Sheet immer übernehmen
+        sheets_to_save = {current_sheet: df}
+        # Praxis-Sheets ergänzen statt überschreiben
+        for praxis_sheet, praxis_df in sorted_data.items():
+            if praxis_sheet in all_sheets_data:
+                praxis_df = praxis_df.reset_index(drop=True)
+                alt_df = all_sheets_data[praxis_sheet].reset_index(drop=True)
+                columns = list(praxis_df.columns)
+                alt_df = alt_df.reindex(columns=columns)
+                # Robuste Duplikat-Prüfung: Hash aus allen Spaltenwerten (stripped, NaN als '')
+                def row_hash(row):
+                    return '|'.join([(str(x).strip() if pd.notna(x) else '') for x in row])
+                alt_hashes = set(row_hash(row) for _, row in alt_df.iterrows())
+                new_rows = [row for _, row in praxis_df.iterrows() if row_hash(row) not in alt_hashes]
+                if new_rows:
+                    new_df = pd.DataFrame(new_rows, columns=columns)
+                    merged = pd.concat([new_df, alt_df], ignore_index=True)
+                else:
+                    merged = alt_df
+                sheets_to_save[praxis_sheet] = merged
+            else:
+                sheets_to_save[praxis_sheet] = praxis_df.reset_index(drop=True)
+        for k, v in sheets_to_save.items():
+            print(f"[DEBUG] Sheet to save: {k}, rows: {v.shape}")
+        db_manager.save_sheets(file_id, sheets_to_save)
+        # Nach dem Speichern: vollständige Sheet-Liste neu laden
+        all_sheets_data, all_sheet_names = db_manager.load_excel_file(file_hash=None, filename=filename)
+        # session['sheet_names'] NICHT überschreiben, damit die Original-Reihenfolge erhalten bleibt
+        if current_sheet in all_sheet_names:
+            session['current_sheet'] = current_sheet
         else:
-            return jsonify({'error': message})
-    
-    return jsonify({'error': 'Keine Daten zum Sortieren gefunden'})
+            session['current_sheet'] = all_sheet_names[0] if all_sheet_names else None
+        return jsonify({
+            'success': True,
+            'message': message,
+            'new_sheets': list(sorted_data.keys()),
+            'all_sheets': all_sheet_names
+        })
+    else:
+        return jsonify({'error': message})
 
 @app.route('/files')
 def list_files():
@@ -396,10 +444,119 @@ def test_database():
             'error_type': type(e).__name__
             })
 
+@app.route('/update_cell', methods=['POST'])
+def update_cell():
+    data = request.get_json()
+    sheet = data.get('sheet')
+    row = data.get('row')
+    column = data.get('column')
+    value = data.get('value')
+    filename = session.get('current_filename', '')
+    file_id = session.get('current_file_id')
+    if not (sheet and column and filename and file_id is not None):
+        return jsonify({'success': False, 'error': 'Ungültige Anfrage'}), 400
+    # Lade aktuelle Daten
+    sheets_data, _ = db_manager.load_excel_file(file_hash=None, filename=filename)
+    if sheets_data is None or sheet not in sheets_data:
+        return jsonify({'success': False, 'error': 'Sheet nicht gefunden'}), 404
+    df = sheets_data[sheet]
+    try:
+        row = int(row)
+        if row < 0 or row >= len(df):
+            return jsonify({'success': False, 'error': 'Ungültige Zeilennummer'}), 400
+        df.at[row, column] = value
+        sheets_data[sheet] = df
+        db_manager.save_sheets(file_id, {sheet: df})
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/delete_row', methods=['POST'])
+def delete_row():
+    data = request.get_json()
+    sheet = data.get('sheet')
+    row = data.get('row')
+    filename = session.get('current_filename', '')
+    file_id = session.get('current_file_id')
+    if not (sheet and filename and file_id is not None):
+        return jsonify({'success': False, 'error': 'Ungültige Anfrage'}), 400
+    # Lade aktuelle Daten
+    sheets_data, _ = db_manager.load_excel_file(file_hash=None, filename=filename)
+    if sheets_data is None or sheet not in sheets_data:
+        return jsonify({'success': False, 'error': 'Sheet nicht gefunden'}), 404
+    df = sheets_data[sheet]
+    try:
+        row = int(row)
+        if row < 0 or row >= len(df):
+            return jsonify({'success': False, 'error': 'Ungültige Zeilennummer'}), 400
+        df = df.drop(df.index[row]).reset_index(drop=True)
+        sheets_data[sheet] = df
+        db_manager.save_sheets(file_id, {sheet: df})
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/color_row', methods=['POST'])
+def color_row():
+    data = request.get_json()
+    sheet = data.get('sheet')
+    row = data.get('row')
+    color = data.get('color')
+    filename = session.get('current_filename', '')
+    file_id = session.get('current_file_id')
+    if not (sheet and filename and file_id is not None):
+        return jsonify({'success': False, 'error': 'Ungültige Anfrage'}), 400
+    sheets_data, _ = db_manager.load_excel_file(file_hash=None, filename=filename)
+    if sheets_data is None or sheet not in sheets_data:
+        return jsonify({'success': False, 'error': 'Sheet nicht gefunden'}), 404
+    df = sheets_data[sheet]
+    try:
+        row = int(row)
+        if row < 0 or row >= len(df):
+            return jsonify({'success': False, 'error': 'Ungültige Zeilennummer'}), 400
+        if '_row_color' not in df.columns:
+            df['_row_color'] = ''
+        if color == 'none':
+            df.at[row, '_row_color'] = ''
+        else:
+            df.at[row, '_row_color'] = color
+        sheets_data[sheet] = df
+        db_manager.save_sheets(file_id, {sheet: df})
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/comment_row', methods=['POST'])
+def comment_row():
+    data = request.get_json()
+    sheet = data.get('sheet')
+    row = data.get('row')
+    comment = data.get('comment', '')
+    filename = session.get('current_filename', '')
+    file_id = session.get('current_file_id')
+    if not (sheet and filename and file_id is not None):
+        return jsonify({'success': False, 'error': 'Ungültige Anfrage'}), 400
+    sheets_data, _ = db_manager.load_excel_file(file_hash=None, filename=filename)
+    if sheets_data is None or sheet not in sheets_data:
+        return jsonify({'success': False, 'error': 'Sheet nicht gefunden'}), 404
+    df = sheets_data[sheet]
+    try:
+        row = int(row)
+        if row < 0 or row >= len(df):
+            return jsonify({'success': False, 'error': 'Ungültige Zeilennummer'}), 400
+        if '_row_comment' not in df.columns:
+            df['_row_comment'] = ''
+        df.at[row, '_row_comment'] = comment
+        sheets_data[sheet] = df
+        db_manager.save_sheets(file_id, {sheet: df})
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     # Erstelle Datenbank-Tabellen
     db_manager.create_tables()
     
     # Starte Flask-App
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False) 
+    app.run(host='0.0.0.0', port=port, debug=True) 

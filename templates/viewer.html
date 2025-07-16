@@ -1,1 +1,292 @@
-TEST VIEWER GANZ OBEN 
+{% extends "base.html" %}
+
+{% block title %}Daten-Viewer - Excel Viewer Pro{% endblock %}
+
+{% block content %}
+<style>
+    table.table {
+        border-collapse: collapse;
+        width: auto;
+    }
+    table.table th, table.table td {
+        border: 1px solid #bfc4c9;
+        padding: 6px 8px;
+    }
+    table.table thead th {
+        background: #f8fafb;
+    }
+    .table-responsive {
+        margin: 0 auto;
+        width: 100%;
+        max-width: none;
+    }
+    .row-color-yellow, tr.row-color-yellow > td { background: #fffbe6 !important; }
+    .row-color-green, tr.row-color-green > td { background: #e6ffed !important; }
+    .row-color-red,   tr.row-color-red > td { background: #ffeaea !important; }
+    .row-color-blue,  tr.row-color-blue > td { background: #e6f0ff !important; }
+    .comment-icon.has-comment { color: #339cff !important; }
+</style>
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow" style="border:1px solid #e0e3e7; background:#fff;">
+            <div class="card-header" style="background:#fff; color:#444;">
+                <h3 class="card-title mb-0" style="color:#444;">
+                    <i class="fas fa-table me-2" style="color:#444;"></i>{{ filename }}
+                </h3>
+                <div>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm" style="color:#444; border:1px solid #d1d5db; background:#fff;">
+                        <i class="fas fa-arrow-left me-1"></i>Zurück
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Toolbar -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="sheetSelector" class="form-label">Arbeitsblatt:</label>
+                        <form method="get" action="{{ url_for('viewer') }}">
+                            <select name="sheet" class="form-select sheet-selector" onchange="this.form.submit()">
+                                {% for sheet in sheet_names %}
+                                    <option value="{{ sheet|e }}" {% if sheet == current_sheet %}selected{% endif %}>{{ sheet }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="button" class="btn btn-primary btn-action" id="sortBtn" style="background:#fff; color:#444; border:1px solid #d1d5db;">
+                                <i class="fas fa-sort me-1"></i>Nach Praxen sortieren
+                            </button>
+                            <a href="{{ url_for('list_files') }}" class="btn btn-outline-secondary btn-action" style="border-color:#6c757d; color:#444;">
+                                <i class="fas fa-folder me-1"></i>Alle Dateien
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="table-responsive">
+                    {% if data %}
+                        <table class="table table-striped table-hover" style="width:auto; margin:0 auto; display:table;">
+                            <thead style="background:#fff; color:#444;">
+                                <tr>
+                                    {% for column in columns %}
+                                        {% if column != '_row_color' and column != '_row_comment' %}<th>{{ column }}</th>{% endif %}
+                                    {% endfor %}
+                                    <th style="width:36px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in data %}
+                                    <tr data-row="{{ loop.index0 }}" class="{% if row['_row_color'] %}row-color-{{ row['_row_color'] }}{% endif %}">
+                                        {% for column in columns %}
+                                            {% if column != '_row_color' and column != '_row_comment' %}<td data-column="{{ column }}">{{ row[column] if row[column] is not none else '' }}</td>{% endif %}
+                                        {% endfor %}
+                                        <td>
+                                            <span class="comment-icon{% if row['_row_comment'] %} has-comment{% endif %}" title="{{ row['_row_comment']|default('') }}" data-comment="{{ row['_row_comment']|default('') }}" style="cursor:pointer; color:#888;" data-bs-toggle="tooltip" data-row="{{ loop.index0 }}">
+                                                <i class="fas fa-comment-dots"></i>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x" style="color:#6c757d; opacity:0.5;"></i>
+                            <h5 style="color:#6c757d;">Keine Daten verfügbar</h5>
+                            <p style="color:#6c757d;">Das ausgewählte Arbeitsblatt enthält keine Daten.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Nach Praxen sortieren
+    $('#sortBtn').click(function() {
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Sortiere...');
+        $.get('/sort_praxis')
+            .always(function() {
+                location.reload();
+            });
+    });
+
+    // Inline-Editing für Tabellenzellen per Doppelklick
+    $(document).on('dblclick', 'td[data-column]', function() {
+        var td = $(this);
+        if (td.find('input').length > 0) return; // Bereits im Edit-Modus
+        var oldValue = td.text();
+        var col = td.data('column');
+        var rowIdx = td.closest('tr').data('row');
+        var input = $('<input type="text" class="form-control form-control-sm" />').val(oldValue);
+        td.empty().append(input);
+        input.focus();
+        input.on('blur keydown', function(e) {
+            if (e.type === 'blur' || (e.type === 'keydown' && e.key === 'Enter')) {
+                var newValue = input.val();
+                td.text(newValue);
+                if (newValue !== oldValue) {
+                    // AJAX-Update
+                    $.ajax({
+                        url: '/update_cell',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            sheet: $('select[name=sheet]').val(),
+                            row: rowIdx,
+                            column: col,
+                            value: newValue
+                        }),
+                        success: function(resp) {
+                            if (!resp.success) {
+                                alert('Fehler beim Speichern: ' + resp.error);
+                                td.text(oldValue);
+                            }
+                        },
+                        error: function() {
+                            alert('Fehler beim Speichern');
+                            td.text(oldValue);
+                        }
+                    });
+                }
+            }
+        });
+    });
+
+    // Kontextmenü für Zeilen-Löschung und Farbmarkierung
+    let contextMenu = $('<div id="rowContextMenu" style="display:none; position:absolute; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.15); min-width:140px; padding:4px 0;">'
+        +'<a href="#" id="deleteRowBtn" style="display:block; padding:6px 16px; color:#c00; text-decoration:none;">Zeile löschen</a>'
+        +'<div style="border-top:1px solid #eee; margin:4px 0;"></div>'
+        +'<a href="#" class="colorRowBtn" data-color="yellow" style="display:block; padding:6px 16px; color:#b59a00;">Gelb markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="green" style="display:block; padding:6px 16px; color:#1a7f37;">Grün markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="red" style="display:block; padding:6px 16px; color:#c00;">Rot markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="blue" style="display:block; padding:6px 16px; color:#0057b8;">Blau markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="none" style="display:block; padding:6px 16px; color:#444;">Markierung entfernen</a>'
+        +'</div>');
+    $('body').append(contextMenu);
+
+    $(document).on('contextmenu', 'tr[data-row]', function(e) {
+        e.preventDefault();
+        let rowIdx = $(this).data('row');
+        contextMenu.data('row', rowIdx).css({top: e.pageY+2, left: e.pageX+2}).show();
+        return false;
+    });
+    $(document).on('click', function() { contextMenu.hide(); });
+    $(document).on('scroll', function() { contextMenu.hide(); });
+
+    $('#rowContextMenu').on('click', '#deleteRowBtn', function(e) {
+        e.preventDefault();
+        let rowIdx = contextMenu.data('row');
+        contextMenu.hide();
+        if (confirm('Wirklich diese Zeile löschen?')) {
+            $.ajax({
+                url: '/delete_row',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    sheet: $('select[name=sheet]').val(),
+                    row: rowIdx
+                }),
+                success: function(resp) {
+                    if (resp.success) {
+                        $('tr[data-row="'+rowIdx+'"]').remove();
+                    } else {
+                        alert('Fehler beim Löschen: ' + resp.error);
+                    }
+                },
+                error: function() {
+                    alert('Fehler beim Löschen');
+                }
+            });
+        }
+    });
+    $('#rowContextMenu').on('click', '.colorRowBtn', function(e) {
+        e.preventDefault();
+        let rowIdx = contextMenu.data('row');
+        let color = $(this).data('color');
+        contextMenu.hide();
+        $.ajax({
+            url: '/color_row',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                sheet: $('select[name=sheet]').val(),
+                row: rowIdx,
+                color: color
+            }),
+            success: function(resp) {
+                let tr = $('tr[data-row="'+rowIdx+'"]').removeClass('row-color-yellow row-color-green row-color-red row-color-blue');
+                if (color !== 'none') tr.addClass('row-color-'+color);
+            },
+            error: function() {
+                alert('Fehler beim Markieren');
+            }
+        });
+    });
+
+    // Tooltip für Kommentare
+    $('[data-bs-toggle="tooltip"]').tooltip();
+
+    // Popover für Kommentare
+    let commentPopover = $('<div id="commentPopover" style="display:none; position:absolute; z-index:10000; background:#fff; border:1px solid #ccc; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.15); padding:10px; min-width:220px;">'
+        +'<div style="margin-bottom:6px; font-size:13px; color:#444;">Kommentar bearbeiten</div>'
+        +'<input type="text" class="form-control form-control-sm" id="commentInput" style="margin-bottom:8px;" />'
+        +'<button class="btn btn-primary btn-sm" id="saveCommentBtn" style="width:100%;">Speichern</button>'
+        +'</div>');
+    $('body').append(commentPopover);
+    let currentCommentIcon = null;
+
+    $(document).on('click', '.comment-icon', function(e) {
+        e.stopPropagation();
+        let icon = $(this);
+        let rowIdx = icon.data('row');
+        let oldComment = icon.data('comment') || '';
+        currentCommentIcon = icon;
+        $('#commentInput').val(oldComment);
+        commentPopover.data('row', rowIdx).css({top: icon.offset().top + icon.height() + 6, left: icon.offset().left}).show();
+        $('#commentInput').focus();
+    });
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#commentPopover, .comment-icon').length) {
+            commentPopover.hide();
+        }
+    });
+    $('#commentPopover').on('click', '#saveCommentBtn', function() {
+        let rowIdx = commentPopover.data('row');
+        let newComment = $('#commentInput').val();
+        let icon = currentCommentIcon;
+        commentPopover.hide();
+        // AJAX speichern
+        $.ajax({
+            url: '/comment_row',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                sheet: $('select[name=sheet]').val(),
+                row: rowIdx,
+                comment: newComment
+            }),
+            success: function() {
+                icon.attr('title', newComment);
+                icon.attr('data-comment', newComment);
+                icon.tooltip('dispose').tooltip();
+                if (newComment) {
+                    icon.addClass('has-comment');
+                } else {
+                    icon.removeClass('has-comment');
+                }
+            },
+            error: function() {
+                alert('Fehler beim Speichern des Kommentars');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 
