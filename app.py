@@ -374,10 +374,28 @@ def list_files():
 
 @app.route('/load_file/<int:file_id>')
 def load_file(file_id):
-    """Lädt eine gespeicherte Datei"""
-    # Hier würde die Logik zum Laden einer spezifischen Datei implementiert
-    flash('Funktion noch nicht implementiert', 'info')
-    return redirect(url_for('files'))
+    """Lädt eine gespeicherte Datei und setzt die Session-Variablen"""
+    # Datei-Metadaten und Name aus der Datenbank holen
+    file_info = db_manager.get_file_info(file_id)
+    if not file_info:
+        flash('Datei nicht gefunden', 'error')
+        return redirect(url_for('list_files'))
+    filename = file_info['filename'] if isinstance(file_info, dict) else getattr(file_info, 'filename', None)
+    if not filename:
+        flash('Dateiname nicht gefunden', 'error')
+        return redirect(url_for('list_files'))
+    # Excel-Daten laden
+    sheets_data, sheet_names = db_manager.load_excel_file(file_hash=None, filename=filename)
+    if sheets_data is None or not sheet_names:
+        flash('Fehler beim Laden der Datei', 'error')
+        return redirect(url_for('list_files'))
+    # Session-Variablen setzen
+    session['current_file_id'] = file_id
+    session['current_filename'] = filename
+    session['sheet_names'] = sheet_names
+    session['current_sheet'] = sheet_names[0] if sheet_names else None
+    flash(f'Datei "{filename}" geladen', 'success')
+    return redirect(url_for('viewer'))
 
 @app.route('/delete_file/<int:file_id>')
 def delete_file(file_id):
@@ -387,7 +405,7 @@ def delete_file(file_id):
     else:
         flash('Fehler beim Löschen der Datei', 'error')
     
-    return redirect(url_for('files'))
+    return redirect(url_for('list_files'))
 
 @app.route('/backup/<int:file_id>')
 def create_backup(file_id):
