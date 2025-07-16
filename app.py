@@ -376,7 +376,7 @@ def list_files():
 def load_file(file_id):
     """Lädt eine gespeicherte Datei und setzt die Session-Variablen"""
     # Datei-Metadaten und Name aus der Datenbank holen
-    file_info = db_manager.get_file_info(file_id)
+    file_info = next((f for f in db_manager.list_saved_files() if f['id'] == file_id), None)
     if not file_info:
         flash('Datei nicht gefunden', 'error')
         return redirect(url_for('list_files'))
