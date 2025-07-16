@@ -30,11 +30,11 @@
     <div class="col-12">
         <div class="card shadow" style="border:1px solid #e0e3e7; background:#fff;">
             <div class="card-header" style="background:#fff; color:#444;">
-                <h3 class="card-title mb-0" style="color:#444;">
-                    <i class="fas fa-table me-2" style="color:#444;"></i>{{ filename }}
+                <h3 class="card-title mb-0" style="color:#444; font-size:1.1rem; font-weight:500; margin-top:24px;">
+                    {{ filename }}
                 </h3>
                 <div>
-                    <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm" style="color:#444; border:1px solid #d1d5db; background:#fff;">
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm" style="color:#444; border:1px solid #d1d5db; background:#fff; margin-top:18px;">
                         <i class="fas fa-arrow-left me-1"></i>Zurück
                     </a>
                 </div>
@@ -52,13 +52,13 @@
                             </select>
                         </form>
                     </div>
-                    <div class="col-md-8">
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="button" class="btn btn-primary btn-action" id="sortBtn" style="background:#fff; color:#444; border:1px solid #d1d5db;">
-                                <i class="fas fa-sort me-1"></i>Nach Praxen sortieren
+                    <div class="col-md-8 text-end">
+                        <div class="d-inline-flex gap-2 mt-4">
+                            <button type="button" class="btn btn-primary btn-action" id="sortBtn" style="background:#339cff !important; color:#fff !important; border:1px solid #339cff !important;">
+                                Nach Praxen sortieren
                             </button>
                             <a href="{{ url_for('list_files') }}" class="btn btn-outline-secondary btn-action" style="border-color:#6c757d; color:#444;">
-                                <i class="fas fa-folder me-1"></i>Alle Dateien
+                                Alle Dateien
                             </a>
                         </div>
                     </div>
@@ -160,14 +160,18 @@ $(document).ready(function() {
     });
 
     // Kontextmenü für Zeilen-Löschung und Farbmarkierung
-    let contextMenu = $('<div id="rowContextMenu" style="display:none; position:absolute; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.15); min-width:140px; padding:4px 0;">'
+    let contextMenu = $('<div id="rowContextMenu" style="display:none; position:absolute; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.15); min-width:160px; padding:4px 0;">'
         +'<a href="#" id="deleteRowBtn" style="display:block; padding:6px 16px; color:#c00; text-decoration:none;">Zeile löschen</a>'
         +'<div style="border-top:1px solid #eee; margin:4px 0;"></div>'
-        +'<a href="#" class="colorRowBtn" data-color="yellow" style="display:block; padding:6px 16px; color:#b59a00;">Gelb markieren</a>'
-        +'<a href="#" class="colorRowBtn" data-color="green" style="display:block; padding:6px 16px; color:#1a7f37;">Grün markieren</a>'
-        +'<a href="#" class="colorRowBtn" data-color="red" style="display:block; padding:6px 16px; color:#c00;">Rot markieren</a>'
-        +'<a href="#" class="colorRowBtn" data-color="blue" style="display:block; padding:6px 16px; color:#0057b8;">Blau markieren</a>'
-        +'<a href="#" class="colorRowBtn" data-color="none" style="display:block; padding:6px 16px; color:#444;">Markierung entfernen</a>'
+        +'<a href="#" class="colorRowBtn" data-color="yellow" style="display:flex; align-items:center; gap:8px; padding:6px 16px; color:#222; text-decoration:none;">'
+        +'<span style="display:inline-block; width:16px; height:16px; border-radius:50%; background:#fffbe6; border:1px solid #e6d700;"></span>Gelb markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="green" style="display:flex; align-items:center; gap:8px; padding:6px 16px; color:#222; text-decoration:none;">'
+        +'<span style="display:inline-block; width:16px; height:16px; border-radius:50%; background:#e6ffed; border:1px solid #1a7f37;"></span>Grün markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="red" style="display:flex; align-items:center; gap:8px; padding:6px 16px; color:#222; text-decoration:none;">'
+        +'<span style="display:inline-block; width:16px; height:16px; border-radius:50%; background:#ffeaea; border:1px solid #c00;"></span>Rot markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="blue" style="display:flex; align-items:center; gap:8px; padding:6px 16px; color:#222; text-decoration:none;">'
+        +'<span style="display:inline-block; width:16px; height:16px; border-radius:50%; background:#e6f0ff; border:1px solid #339cff;"></span>Blau markieren</a>'
+        +'<a href="#" class="colorRowBtn" data-color="none" style="display:block; padding:6px 16px; color:#444; text-decoration:none;">Markierung entfernen</a>'
         +'</div>');
     $('body').append(contextMenu);
 
