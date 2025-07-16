@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from database import DatabaseManager
 from sqlalchemy import text
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -32,6 +33,36 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Initialisiere Datenbank
 db_manager = DatabaseManager()
+
+# Passwort für Zugriffsschutz
+APP_PASSWORD = 'Q*%(1v87q"cI'
+
+# Decorator für Passwortschutz
+
+def passwort_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('auth_ok') and request.endpoint != 'passwort':
+            return redirect(url_for('passwort'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/passwort', methods=['GET', 'POST'])
+def passwort():
+    if request.method == 'POST':
+        eingabe = request.form.get('passwort', '')
+        if eingabe == APP_PASSWORD:
+            session['auth_ok'] = True
+            return redirect(url_for('index'))
+        else:
+            flash('Falsches Passwort!', 'error')
+    return render_template('passwort.html')
+
+# Alle Routen (außer passwort) schützen
+# for rule in list(app.url_map.iter_rules()):
+#     if rule.endpoint not in ('static', 'passwort'):
+#         view_func = app.view_functions[rule.endpoint]
+#         app.view_functions[rule.endpoint] = passwort_required(view_func)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -147,11 +178,13 @@ def sortiere_nach_praxis(df):
         return df, f"Fehler bei der Verteilung: {str(e)}"
 
 @app.route('/')
+@passwort_required
 def index():
     """Hauptseite"""
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
+@passwort_required
 def upload_file():
     """Datei-Upload-Handler"""
     if 'file' not in request.files:
@@ -228,6 +261,7 @@ def upload_file():
     return redirect(url_for('index'))
 
 @app.route('/viewer')
+@passwort_required
 def viewer():
     if 'current_file_id' not in session:
         flash('Keine Datei geladen', 'error')
@@ -262,6 +296,7 @@ def viewer():
     )
 
 @app.route('/change_sheet/<sheet_name>')
+@passwort_required
 def change_sheet(sheet_name):
     print("Sheet-Wechsel zu:", sheet_name)
     print("Sheet-Wechsel zu (repr):", repr(sheet_name))
@@ -288,6 +323,7 @@ def change_sheet(sheet_name):
     return jsonify({'error': 'Sheet nicht gefunden'})
 
 @app.route('/sort_praxis')
+@passwort_required
 def sort_praxis():
     if 'current_file_id' not in session:
         return jsonify({'error': 'Keine Datei geladen'})
@@ -367,12 +403,14 @@ def sort_praxis():
         return jsonify({'error': message})
 
 @app.route('/files')
+@passwort_required
 def list_files():
     """Listet alle gespeicherten Dateien"""
     files = db_manager.list_saved_files()
     return render_template('files.html', files=files)
 
 @app.route('/load_file/<int:file_id>')
+@passwort_required
 def load_file(file_id):
     """Lädt eine gespeicherte Datei und setzt die Session-Variablen"""
     # Datei-Metadaten und Name aus der Datenbank holen
@@ -398,6 +436,7 @@ def load_file(file_id):
     return redirect(url_for('viewer'))
 
 @app.route('/delete_file/<int:file_id>')
+@passwort_required
 def delete_file(file_id):
     """Löscht eine Datei"""
     if db_manager.delete_file(file_id):
@@ -408,6 +447,7 @@ def delete_file(file_id):
     return redirect(url_for('list_files'))
 
 @app.route('/backup/<int:file_id>')
+@passwort_required
 def create_backup(file_id):
     """Erstellt ein Backup einer Datei"""
     filename = session.get('current_filename', '')
@@ -425,6 +465,7 @@ def create_backup(file_id):
     return redirect(url_for('viewer'))
 
 @app.route('/setup-database')
+@passwort_required
 def setup_database():
     """Erstellt die Datenbank-Tabellen"""
     try:
@@ -439,6 +480,7 @@ def setup_database():
     return redirect(url_for('index'))
 
 @app.route('/test-db')
+@passwort_required
 def test_database():
     """Testet die Datenbankverbindung"""
     try:
@@ -463,6 +505,7 @@ def test_database():
             })
 
 @app.route('/update_cell', methods=['POST'])
+@passwort_required
 def update_cell():
     data = request.get_json()
     sheet = data.get('sheet')
@@ -490,6 +533,7 @@ def update_cell():
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/delete_row', methods=['POST'])
+@passwort_required
 def delete_row():
     data = request.get_json()
     sheet = data.get('sheet')
@@ -515,6 +559,7 @@ def delete_row():
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/color_row', methods=['POST'])
+@passwort_required
 def color_row():
     data = request.get_json()
     sheet = data.get('sheet')
@@ -545,6 +590,7 @@ def color_row():
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/comment_row', methods=['POST'])
+@passwort_required
 def comment_row():
     data = request.get_json()
     sheet = data.get('sheet')

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 400px; margin: 60px auto; padding: 32px; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.07); font-family: 'Poppins', sans-serif;">
+    <h2 style="margin-bottom: 24px; font-weight: 600;">Zugriffsschutz</h2>
+    <form method="post">
+        <div style="margin-bottom: 18px;">
+            <label for="passwort" style="font-weight: 500;">Passwort:</label>
+            <input type="password" id="passwort" name="passwort" class="form-control" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; margin-top: 6px;" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; font-weight: 600;">Bestätigen</button>
+    </form>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin-top: 18px;">
+          {% for category, message in messages %}
+            <div style="color: #b00; font-weight: 500;">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+</div>
+{% endblock %} 
